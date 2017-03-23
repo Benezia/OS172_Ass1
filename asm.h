@@ -1,4 +1,4 @@
-//a11111111111
+//
 // assembler macros to create x86 segments
 //
 
