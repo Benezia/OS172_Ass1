@@ -107,6 +107,7 @@ runcmd(struct cmd *cmd)
 	    		exec(s, ecmd->argv);
 	    	}
 	    }
+	    printf(2, "exec %s failed\n", ecmd->argv[0]);
 	}
 	else{
 		printf(2, "exec %s failed\n", ecmd->argv[0]);
