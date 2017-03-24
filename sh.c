@@ -86,10 +86,10 @@ runcmd(struct cmd *cmd)
     exec(ecmd->argv[0], ecmd->argv);
     fd = open("/path",O_RDONLY);
 
-    if (myCmd[0] != 47){
+    if (myCmd[0] != '/'){
 	    while ((isEOF = read(fd,c,1)) != -1){
 	    	
-	    	if (c[0]!=58){
+	    	if (c[0]!=':'){
 	    		s[stringLoc] = c[0];
 	    		stringLoc++;
 	    	}
