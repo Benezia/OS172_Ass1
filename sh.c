@@ -112,6 +112,7 @@ runcmd(struct cmd *cmd)
 		printf(2, "exec %s failed\n", ecmd->argv[0]);
 	}
 
+	close(fd);
     break;
 
   case REDIR:
