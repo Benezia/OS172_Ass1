@@ -100,6 +100,7 @@ runcmd(struct cmd *cmd)
 	    			stringLoc++;
 	    			cmdLoc++;
 	    		}
+	    		s[stringLoc] = 0;
 
 	    		stringLoc = 0;
 	    		cmdLoc = 0;
