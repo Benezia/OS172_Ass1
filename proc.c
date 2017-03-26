@@ -184,10 +184,13 @@ fork(void)
 // An exited process remains in the zombie state
 // until its parent calls wait() to find out it exited.
 void
-exit(void)
+exit(int status)
 {
   struct proc *p;
   int fd;
+
+  proc->status = status;
+
 
   if(proc == initproc)
     panic("init exiting");
@@ -216,6 +219,7 @@ exit(void)
       p->parent = initproc;
       if(p->state == ZOMBIE)
         wakeup1(initproc);
+
     }
   }
 
