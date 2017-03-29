@@ -1,5 +1,7 @@
 [Dolphin]
 HeaderColumnWidths=1421,72,111,164
-Timestamp=2017,3,29,20,13,18
+SortRole=type
+Timestamp=2017,3,30,0,18,29
 Version=3
+ViewMode=1
 VisibleRoles=Details_text,Details_size,Details_date,Details_type,CustomizedDetails

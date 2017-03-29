@@ -20,8 +20,7 @@ extern void trapret(void);
 
 static void wakeup1(void *chan);
 
-void
-pinit(void)
+void pinit(void)
 {
   initlock(&ptable.lock, "ptable");
 }
@@ -32,8 +31,7 @@ pinit(void)
 // state required to run in the kernel.
 // Otherwise return 0.
 static struct proc*
-allocproc(void)
-{
+allocproc(void) {
   struct proc *p;
   char *sp;
 
@@ -78,9 +76,7 @@ found:
 
 //PAGEBREAK: 32
 // Set up first user process.
-void
-userinit(void)
-{
+void userinit(void) {
   struct proc *p;
   extern char _binary_initcode_start[], _binary_initcode_size[];
 
@@ -116,9 +112,7 @@ userinit(void)
 
 // Grow current process's memory by n bytes.
 // Return 0 on success, -1 on failure.
-int
-growproc(int n)
-{
+int growproc(int n) {
   uint sz;
 
   sz = proc->sz;
@@ -137,9 +131,7 @@ growproc(int n)
 // Create a new process copying p as the parent.
 // Sets up stack to return as if from system call.
 // Caller must set state of returned proc to RUNNABLE.
-int
-fork(void)
-{
+int fork(void) {
   int i, pid;
   struct proc *np;
 
@@ -183,9 +175,7 @@ fork(void)
 // Exit the current process.  Does not return.
 // An exited process remains in the zombie state
 // until its parent calls wait() to find out it exited.
-void
-exit(int status)
-{
+void exit(int status) {
   struct proc *p;
   int fd;
 
@@ -231,9 +221,7 @@ exit(int status)
 
 // Wait for a child process to exit and return its pid.
 // Return -1 if this process has no children.
-int
-wait(int * status)
-{
+int wait(int * status) {
   struct proc *p;
   int havekids, pid;
 
@@ -275,6 +263,16 @@ wait(int * status)
   }
 }
 
+void priority(int priority) { 
+  //TODO: PRIORITY CODE
+  cprintf("priority code: %d\n", priority);
+}
+
+void policy(int policy) { 
+  //TODO: POLICY CODE
+  cprintf("policy code: %d\n", policy);
+}
+
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -285,15 +283,12 @@ wait(int * status)
 //      via swtch back to the scheduler.
 
 
-uint randomTicket(uint tick, uint sum)
-  {
+uint randomTicket(uint tick, uint sum) {
   return ((tick*212344L+1234123L)%sum);
   }
 
 
-void
-scheduler(void)
-{
+void scheduler(void) {
   struct proc *p;
 
   for(;;){
@@ -331,9 +326,7 @@ scheduler(void)
 // be proc->intena and proc->ncli, but that would
 // break in the few places where a lock is held but
 // there's no process.
-void
-sched(void)
-{
+void sched(void) {
   int intena;
 
   if(!holding(&ptable.lock))
@@ -350,9 +343,7 @@ sched(void)
 }
 
 // Give up the CPU for one scheduling round.
-void
-yield(void)
-{
+void yield(void) {
   acquire(&ptable.lock);  //DOC: yieldlock
   proc->state = RUNNABLE;
   sched();
@@ -361,9 +352,7 @@ yield(void)
 
 // A fork child's very first scheduling by scheduler()
 // will swtch here.  "Return" to user space.
-void
-forkret(void)
-{
+void forkret(void) {
   static int first = 1;
   // Still holding ptable.lock from scheduler.
   release(&ptable.lock);
@@ -382,9 +371,7 @@ forkret(void)
 
 // Atomically release lock and sleep on chan.
 // Reacquires lock when awakened.
-void
-sleep(void *chan, struct spinlock *lk)
-{
+void sleep(void *chan, struct spinlock *lk) {
   if(proc == 0)
     panic("sleep");
 
@@ -420,9 +407,7 @@ sleep(void *chan, struct spinlock *lk)
 //PAGEBREAK!
 // Wake up all processes sleeping on chan.
 // The ptable lock must be held.
-static void
-wakeup1(void *chan)
-{
+static void wakeup1(void *chan) {
   struct proc *p;
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
@@ -431,9 +416,7 @@ wakeup1(void *chan)
 }
 
 // Wake up all processes sleeping on chan.
-void
-wakeup(void *chan)
-{
+void wakeup(void *chan) {
   acquire(&ptable.lock);
   wakeup1(chan);
   release(&ptable.lock);
@@ -442,9 +425,7 @@ wakeup(void *chan)
 // Kill the process with the given pid.
 // Process won't exit until it returns
 // to user space (see trap in trap.c).
-int
-kill(int pid)
-{
+int kill(int pid) {
   struct proc *p;
 
   acquire(&ptable.lock);
@@ -466,9 +447,7 @@ kill(int pid)
 // Print a process listing to console.  For debugging.
 // Runs when user types ^P on console.
 // No lock to avoid wedging a stuck machine further.
-void
-procdump(void)
-{
+void procdump(void) {
   static char *states[] = {
   [UNUSED]    "unused",
   [EMBRYO]    "embryo",

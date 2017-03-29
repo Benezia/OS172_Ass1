@@ -7,39 +7,51 @@
 #include "mmu.h"
 #include "proc.h"
 
-int
-sys_fork(void)
-{
+int sys_fork(void) {
   return fork();
 }
 
-int
-sys_exit(void)
-{
+int sys_exit(void) {
   int status;
 
-  if(argint(0, &status) < 0){
-    return -1;
-  }
-  else{
-     exit(status);
-     return 0;  // not reached
+  if(argint(0, &status) < 0)
+      return -1;
+  else {
+      exit(status);
+      return 0;  // not reached
   }
 }
 
-int
-sys_wait(void)
-{
+int sys_wait(void) {
   int status;
     if (argint(0, &status) < 0)
-    return -1;
-  else
-    return wait((int *)status);
+      return -1;
+    else 
+      return wait((int *)status);
 }
 
-int
-sys_kill(void)
-{
+int sys_priority(void) {
+  int p;
+    if (argint(0, &p) < 0)
+      return -1;
+    else {
+      priority(p);
+      return 0;
+    }
+}
+
+int sys_policy(void) {
+  int p;
+    if (argint(0, &p) < 0)
+      return -1;
+    else {
+      policy(p);
+      return 0;
+    }
+}
+
+
+int sys_kill(void) {
   int pid;
 
   if(argint(0, &pid) < 0)
@@ -47,15 +59,11 @@ sys_kill(void)
   return kill(pid);
 }
 
-int
-sys_getpid(void)
-{
+int sys_getpid(void) {
   return proc->pid;
 }
 
-int
-sys_sbrk(void)
-{
+int sys_sbrk(void) {
   int addr;
   int n;
 
@@ -67,9 +75,7 @@ sys_sbrk(void)
   return addr;
 }
 
-int
-sys_sleep(void)
-{
+int sys_sleep(void) {
   int n;
   uint ticks0;
 
@@ -90,9 +96,7 @@ sys_sleep(void)
 
 // return how many clock tick interrupts have occurred
 // since start.
-int
-sys_uptime(void)
-{
+int sys_uptime(void) {
   uint xticks;
 
   acquire(&tickslock);
@@ -100,3 +104,5 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+

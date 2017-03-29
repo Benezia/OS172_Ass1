@@ -86,24 +86,6 @@ exec(char *path, char **argv)
   sp = sz;
 
   // Push argument strings, prepare rest of stack in ustack.
-/*  for(argc = 0; argv[argc]; argc++) {
-    if(argc >= MAXARG)
-      goto bad;
-    sp = (sp - (strlen(argv[argc]) + 1)) & ~3;
-    if(copyout(pgdir, sp, argv[argc], strlen(argv[argc]) + 1) < 0)
-      goto bad;
-    ustack[3+argc] = sp;
-  }
-  ustack[3+argc] = 0;
-
-  ustack[0] = 0xffffffff;  // fake return PC
-  ustack[1] = argc;
-  ustack[2] = sp - (argc+1)*4;  // argv pointer
-
-  sp -= (3+argc+1) * 4;
-  if(copyout(pgdir, sp, ustack, (3+argc+1)*4) < 0)
-    goto bad;*/
-
 
 //////////added code//////////  args: entry,argc,argv
 
@@ -140,7 +122,6 @@ exec(char *path, char **argv)
   oldpgdir = proc->pgdir;
   proc->pgdir = pgdir;
   proc->sz = sz;
- // proc->tf->eip = elf.entry;  // main
   proc->tf->eip = pointer_pseudo_main;  // main
   proc->tf->esp = sp;
   switchuvm(proc);
