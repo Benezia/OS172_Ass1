@@ -9,7 +9,14 @@
 
 void 
 pseudo_main(int (*entry)(int, char**), int argc, char **argv) 
-{
+{ 
+
+  (*entry)(argc,argv);
+ 
+ __asm__ ("push %eax \n\t"
+          "push $0 \n\t"
+          "movl $2, %eax \n\t"
+          "int $64");
 }
 
 int
@@ -79,7 +86,7 @@ exec(char *path, char **argv)
   sp = sz;
 
   // Push argument strings, prepare rest of stack in ustack.
-  for(argc = 0; argv[argc]; argc++) {
+/*  for(argc = 0; argv[argc]; argc++) {
     if(argc >= MAXARG)
       goto bad;
     sp = (sp - (strlen(argv[argc]) + 1)) & ~3;
@@ -95,7 +102,33 @@ exec(char *path, char **argv)
 
   sp -= (3+argc+1) * 4;
   if(copyout(pgdir, sp, ustack, (3+argc+1)*4) < 0)
+    goto bad;*/
+
+
+//////////added code//////////  args: entry,argc,argv
+
+  for(argc = 0; argv[argc]; argc++) {
+    if(argc >= MAXARG)
+      goto bad;
+    sp = (sp - (strlen(argv[argc]) + 1)) & ~3;
+    if(copyout(pgdir, sp, argv[argc], strlen(argv[argc]) + 1) < 0)
+      goto bad;
+    ustack[4+argc] = sp;
+  }
+  ustack[4+argc] = 0;
+
+
+  ustack[0] = 0xffffffff;  // fake return PC
+  ustack[1] = elf.entry;
+  ustack[2] = argc;
+  ustack[3] = sp - (argc+1)*4; //argv of original main
+
+  sp -= (4+argc+1) * 4;
+  if(copyout(pgdir, sp, ustack, (4+argc+1)*4) < 0)
     goto bad;
+
+
+//////////added code//////////
 
   // Save program name for debugging.
   for(last=s=path; *s; s++)
@@ -107,7 +140,8 @@ exec(char *path, char **argv)
   oldpgdir = proc->pgdir;
   proc->pgdir = pgdir;
   proc->sz = sz;
-  proc->tf->eip = elf.entry;  // main
+ // proc->tf->eip = elf.entry;  // main
+  proc->tf->eip = pointer_pseudo_main;  // main
   proc->tf->esp = sp;
   switchuvm(proc);
   freevm(oldpgdir);

@@ -16,8 +16,8 @@ sys_fork(void)
 int
 sys_exit(void)
 {
-
   int status;
+  cprintf("%s\n", "reached exit syscall");
 
   if(argint(0, &status) < 0){
     return -1;

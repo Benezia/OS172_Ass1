@@ -73,6 +73,9 @@ ls(char *path)
 int
 main(int argc, char *argv[])
 {
+
+ // printf(2,"%s\n","----reached main of ls----");
+//  printf(2,"argc is: %d\n",argc);
   int i;
 
   if(argc < 2){

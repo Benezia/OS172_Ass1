@@ -25,6 +25,7 @@ int
 main(int argc, char *argv[])
 {
   int fd, i;
+  printf(2,"1st arg of cat: %s\n",argv[0]);
 
   if(argc <= 1){
     cat(0);
