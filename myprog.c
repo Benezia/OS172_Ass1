@@ -3,19 +3,19 @@
 #include "user.h"
 #include "fs.h"
 
-
-
 int main() {
     int status;
-    if (fork() >0) {
+    //char* r = "r";
+    if (fork() > 0) {
         wait(&status);
-        if (status != 137) {
+        if (status != 15) {
+            printf(2, "Status: %d\n", status);
             printf(1, "Fail\n");
         } else {
             printf(1, "Passed\n");
         }
         exit(0);
     } else {
-        exit(137);
+    return 15;
     }
 }

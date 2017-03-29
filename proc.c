@@ -283,6 +283,14 @@ wait(int * status)
 //  - swtch to start running that process
 //  - eventually that process transfers control
 //      via swtch back to the scheduler.
+
+
+uint randomTicket(uint tick, uint sum)
+  {
+  return ((tick*212344L+1234123L)%sum);
+  }
+
+
 void
 scheduler(void)
 {
