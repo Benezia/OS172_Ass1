@@ -19,9 +19,9 @@ extern void forkret(void);
 extern void trapret(void);
 
 static void wakeup1(void *chan);
+static unsigned long int next = 1;
 
-void pinit(void)
-{
+void pinit(void) {
   initlock(&ptable.lock, "ptable");
 }
 
@@ -30,8 +30,7 @@ void pinit(void)
 // If found, change state to EMBRYO and initialize
 // state required to run in the kernel.
 // Otherwise return 0.
-static struct proc*
-allocproc(void) {
+static struct proc* allocproc(void) {
   struct proc *p;
   char *sp;
 
@@ -47,6 +46,7 @@ allocproc(void) {
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+  p->ntickets = 20;
 
   release(&ptable.lock);
 
@@ -246,6 +246,7 @@ int wait(int * status) {
         p->parent = 0;
         p->name[0] = 0;
         p->killed = 0;
+        p->ntickets = 0;
         p->state = UNUSED;
         release(&ptable.lock);
         return pid;
@@ -268,9 +269,45 @@ void priority(int priority) {
   cprintf("priority code: %d\n", priority);
 }
 
+
 void policy(int policy) { 
   //TODO: POLICY CODE
   cprintf("policy code: %d\n", policy);
+}
+
+
+int getTicketSum(void) {
+	int sum = 0;
+  	acquire(&ptable.lock);
+	for(struct proc *p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+		if(p->state != UNUSED)
+			sum += p->ntickets;
+	}
+  	release(&ptable.lock);
+	return sum;
+}
+
+int getRandomTicket(void) {
+	int ticketSum = getTicketSum();
+	if (ticketSum == 0)
+		return 0;
+    next = next * 1103515245 + 12341;
+    return (unsigned int)(next/65536) % ticketSum;
+}
+
+struct proc* getSelectedProc(int ticketNum) {
+  	acquire(&ptable.lock);
+	for(struct proc *p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+		if(p->state == UNUSED)
+			continue;
+		ticketNum -= p->ntickets;
+		if (ticketNum < 0) {
+			release(&ptable.lock);
+			return p;
+		}
+	}
+  	release(&ptable.lock);
+	return 0;
 }
 
 //PAGEBREAK: 42
@@ -281,43 +318,70 @@ void policy(int policy) {
 //  - swtch to start running that process
 //  - eventually that process transfers control
 //      via swtch back to the scheduler.
-
-
-uint randomTicket(uint tick, uint sum) {
-  return ((tick*212344L+1234123L)%sum);
-  }
-
-
+//IMPLEMENTED SKEDULAR
 void scheduler(void) {
-  struct proc *p;
+	struct proc *p;
+	int ticketNum;
+	for(;;){
+		sti();	// Enable interrupts on this processor.
+		ticketNum = getRandomTicket();
+		p = getSelectedProc(ticketNum);
+		acquire(&ptable.lock);
+		if(p != 0 && p->state == RUNNABLE) {
+			// Switch to chosen process.  It is the process's job
+			// to release ptable.lock and then reacquire it
+			// before jumping back to us.
+			proc = p;
+			switchuvm(p);
+			p->state = RUNNING;
+			swtch(&cpu->scheduler, p->context);
+			switchkvm();
 
-  for(;;){
-    // Enable interrupts on this processor.
-    sti();
+			// Process is done running for now.
+			// It should have changed its p->state before coming back.
+			proc = 0;
+		}
+		release(&ptable.lock);
 
-    // Loop over process table looking for process to run.
-    acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
-        continue;
-
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
-      swtch(&cpu->scheduler, p->context);
-      switchkvm();
-
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      proc = 0;
-    }
-    release(&ptable.lock);
-
-  }
+	}
 }
+
+
+
+//ORIGINAL SKEDULAR
+void orig_scheduler(void) {
+	struct proc *p;
+
+	for(;;){
+		// Enable interrupts on this processor.
+		sti();
+
+		// Loop over process table looking for process to run.
+		acquire(&ptable.lock);
+		for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+			//cprintf("iterating, pid: %d\n", p->pid);
+			if(p->state != RUNNABLE)
+				continue;
+
+			// Switch to chosen process.  It is the process's job
+			// to release ptable.lock and then reacquire it
+			// before jumping back to us.
+			proc = p;
+			switchuvm(p);
+			p->state = RUNNING;
+			swtch(&cpu->scheduler, p->context);
+			switchkvm();
+
+			// Process is done running for now.
+			// It should have changed its p->state before coming back.
+			proc = 0;
+		}
+		release(&ptable.lock);
+
+	}
+}
+
+
 
 // Enter scheduler.  Must hold only ptable.lock
 // and have changed proc->state. Saves and restores

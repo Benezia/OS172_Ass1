@@ -124,6 +124,9 @@ exec(char *path, char **argv)
   proc->sz = sz;
   proc->tf->eip = pointer_pseudo_main;  // main
   proc->tf->esp = sp;
+
+  //TODO: policy = ??
+
   switchuvm(proc);
   freevm(oldpgdir);
   return 0;

@@ -5,5 +5,4 @@
 
 int main() {
     policy(5);
-    priority(6);
 }
