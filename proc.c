@@ -20,6 +20,8 @@ extern void trapret(void);
 
 static void wakeup1(void *chan);
 static unsigned long int next = 1;
+enum policy { UNIFORM, PRIORITY, DYNAMIC };
+enum policy pol = UNIFORM;
 
 void pinit(void) {
   initlock(&ptable.lock, "ptable");
@@ -46,7 +48,17 @@ static struct proc* allocproc(void) {
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
-  p->ntickets = 20;
+  switch(pol) {
+  	case UNIFORM:
+		p->ntickets = 1;
+		break;
+	case PRIORITY:
+		p->ntickets = 10;
+		break;
+	case DYNAMIC:
+		p->ntickets = 20;
+		break;
+  }
 
   release(&ptable.lock);
 
@@ -264,17 +276,36 @@ int wait(int * status) {
   }
 }
 
+void distributeTickets(int ticketCount) {
+  	acquire(&ptable.lock);
+	for(struct proc *p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+		if(p->state != UNUSED)
+			p->ntickets = ticketCount;
+	}
+  	release(&ptable.lock);	
+}
+
+
 void priority(int priority) { 
-  //TODO: PRIORITY CODE
-  cprintf("priority code: %d\n", priority);
+  if (pol == PRIORITY)
+  	proc->ntickets = priority;
 }
 
 
-void policy(int policy) { 
-  //TODO: POLICY CODE
-  cprintf("policy code: %d\n", policy);
+void policy(int policy) {
+  pol = policy;
+  switch(pol) {
+  	case UNIFORM:
+  		distributeTickets(1);
+  		break;
+  	case PRIORITY:
+  	  	distributeTickets(10);
+  	  	break;
+  	case DYNAMIC:
+  		distributeTickets(20);
+  		break;
+  }
 }
-
 
 int getTicketSum(void) {
 	int sum = 0;
@@ -310,6 +341,21 @@ struct proc* getSelectedProc(int ticketNum) {
 	return 0;
 }
 
+
+void redistributeTickets() {
+	int state = proc->state;
+	int ticketCount = proc->ntickets;
+	if (state == RUNNABLE && ticketCount > 1)
+		proc->ntickets--;
+	if (state == SLEEPING) {
+		if (ticketCount > 90)
+			proc->ntickets = 100;
+		else
+			proc->ntickets += 10;
+	}
+}
+
+
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -322,7 +368,8 @@ struct proc* getSelectedProc(int ticketNum) {
 void scheduler(void) {
 	struct proc *p;
 	int ticketNum;
-	for(;;){
+
+	for(;;) {
 		sti();	// Enable interrupts on this processor.
 		ticketNum = getRandomTicket();
 		p = getSelectedProc(ticketNum);
@@ -337,6 +384,8 @@ void scheduler(void) {
 			swtch(&cpu->scheduler, p->context);
 			switchkvm();
 
+			if (pol == DYNAMIC)
+				redistributeTickets();
 			// Process is done running for now.
 			// It should have changed its p->state before coming back.
 			proc = 0;

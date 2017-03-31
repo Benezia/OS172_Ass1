@@ -65,8 +65,6 @@ struct proc {
   char name[16];               // Process name (debugging)
   int status;                  // Exit status
   int ntickets;                 // Holds the amount of tickets allocated to the process
-  int priority;                 // Process priority for ticket allocation (ticket scheduling)
-
 };
 
 // Process memory is laid out contiguously, low addresses first:
