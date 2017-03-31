@@ -22,6 +22,18 @@ int sys_exit(void) {
   }
 }
 
+int sys_wait_stat(void) {
+    int status;
+    int performance;
+
+    if (argint(0, &status) < 0)
+      return -1;
+    if (argint(1, &performance) < 0)
+      return -1;
+    return wait_stat((int*)status, (struct perf*) performance);
+  
+}
+
 int sys_wait(void) {
   int status;
     if (argint(0, &status) < 0)
@@ -49,6 +61,7 @@ int sys_policy(void) {
       return 0;
     }
 }
+
 
 
 int sys_kill(void) {

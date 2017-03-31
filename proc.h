@@ -46,6 +46,14 @@ struct context {
   uint eip;
 };
 
+struct perf {
+  int ctime;
+  int ttime;
+  int stime;
+  int retime;
+  int rutime;
+};
+
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Per-process state
@@ -64,7 +72,8 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
   int status;                  // Exit status
-  int ntickets;                 // Holds the amount of tickets allocated to the process
+  int ntickets;                // Holds the amount of tickets allocated to the process
+  struct perf *performance;    // Performance statistics
 };
 
 // Process memory is laid out contiguously, low addresses first:

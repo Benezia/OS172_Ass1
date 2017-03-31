@@ -3,6 +3,7 @@ struct context;
 struct file;
 struct inode;
 struct pipe;
+struct perf;
 struct proc;
 struct rtcdate;
 struct spinlock;
@@ -118,6 +119,7 @@ void			priority(int);
 void			policy(int);
 void            wakeup(void*);
 void            yield(void);
+int 			wait_stat(int*, struct perf*);
 
 // swtch.S
 void            swtch(struct context**, struct context*);
