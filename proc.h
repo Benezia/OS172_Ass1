@@ -46,6 +46,7 @@ struct context {
   uint eip;
 };
 
+
 struct perf {
   int ctime;
   int ttime;
@@ -62,6 +63,7 @@ struct proc {
   pde_t* pgdir;                // Page table
   char *kstack;                // Bottom of kernel stack for this process
   enum procstate state;        // Process state
+  int stateTickChanged;         // Procedure state entered tick count
   int pid;                     // Process ID
   struct proc *parent;         // Parent process
   struct trapframe *tf;        // Trap frame for current syscall
@@ -73,7 +75,11 @@ struct proc {
   char name[16];               // Process name (debugging)
   int status;                  // Exit status
   int ntickets;                // Holds the amount of tickets allocated to the process
-  struct perf *performance;    // Performance statistics
+  int ctime;                   // Procedure creation tick
+  int ttime;                   // Procedure termination tick
+  int stime;                   // Procedure total SLEEPING tick count
+  int retime;                  // Procedure total READY (RUNNABLE) tick count
+  int rutime;                  // Procedure total RUNNING tick count
 };
 
 // Process memory is laid out contiguously, low addresses first:

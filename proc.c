@@ -28,12 +28,7 @@ void pinit(void) {
 }
 
 int systemUptime(void) {
-  uint xticks;
-
-  acquire(&tickslock);
-  xticks = ticks;
-  release(&tickslock);
-  return xticks;
+  return ticks;
 }
 
 //PAGEBREAK: 32
@@ -68,10 +63,9 @@ found:
 		p->ntickets = 20;
 		break;
   }
-
-  //p->performance->ctime = systemUptime();
-
   release(&ptable.lock);
+
+  p->ctime = systemUptime();
 
   // Allocate kernel stack.
   if((p->kstack = kalloc()) == 0){
@@ -93,7 +87,6 @@ found:
   p->context = (struct context*)sp;
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
-
   return p;
 }
 
@@ -129,7 +122,7 @@ void userinit(void) {
   acquire(&ptable.lock);
 
   p->state = RUNNABLE;
-
+  p->stateTickChanged = systemUptime();
   release(&ptable.lock);
 }
 
@@ -189,6 +182,7 @@ int fork(void) {
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
+  np->stateTickChanged = systemUptime();
 
   release(&ptable.lock);
 
@@ -203,7 +197,6 @@ void exit(int status) {
   int fd;
 
   proc->status = status;
-
 
   if(proc == initproc)
     panic("init exiting");
@@ -232,12 +225,18 @@ void exit(int status) {
       p->parent = initproc;
       if(p->state == ZOMBIE)
         wakeup1(initproc);
-
     }
   }
 
+  int uptime = systemUptime();
+  p->rutime += (uptime - p->stateTickChanged);
+  p->stateTickChanged = uptime;
+  proc->ttime = uptime;
+
   // Jump into the scheduler, never to return.
+
   proc->state = ZOMBIE;
+
   sched();
   panic("zombie exit");
 }
@@ -261,7 +260,12 @@ int wait_stat(int * status, struct perf * perfPtr) {
         if (status != 0) {
           *status = p-> status;
         }
-        perfPtr = p->performance;
+        perfPtr->ctime = p->ctime;
+        perfPtr->ttime = p->ttime;
+        perfPtr->stime = p->stime;
+        perfPtr->retime = p->retime;
+        perfPtr->rutime = p->rutime;
+
         // Found one.
         pid = p->pid;
         kfree(p->kstack);
@@ -272,6 +276,12 @@ int wait_stat(int * status, struct perf * perfPtr) {
         p->name[0] = 0;
         p->killed = 0;
         p->ntickets = 0;
+        p->ctime = 0;
+        p->ttime = 0;
+        p->stime = 0;
+        p->retime = 0;
+        p->rutime = 0;
+
         p->state = UNUSED;
         release(&ptable.lock);
         return pid;
@@ -319,6 +329,11 @@ int wait(int * status) {
         p->name[0] = 0;
         p->killed = 0;
         p->ntickets = 0;
+        p->ctime = 0;
+        p->ttime = 0;
+        p->stime = 0;
+        p->retime = 0;
+        p->rutime = 0;
         p->state = UNUSED;
         release(&ptable.lock);
         return pid;
@@ -435,11 +450,15 @@ void scheduler(void) {
 		p = getSelectedProc(ticketNum);
 		acquire(&ptable.lock);
 		if(p != 0 && p->state == RUNNABLE) {
+
 			// Switch to chosen process.  It is the process's job
 			// to release ptable.lock and then reacquire it
 			// before jumping back to us.
 			proc = p;
 			switchuvm(p);
+      int uptime = systemUptime();
+      p->retime += (uptime - p->stateTickChanged);
+      p->stateTickChanged = uptime;
 			p->state = RUNNING;
 			swtch(&cpu->scheduler, p->context);
 			switchkvm();
@@ -448,6 +467,8 @@ void scheduler(void) {
 				redistributeTickets();
 			// Process is done running for now.
 			// It should have changed its p->state before coming back.
+
+
 			proc = 0;
 		}
 		release(&ptable.lock);
@@ -468,7 +489,6 @@ void orig_scheduler(void) {
 		// Loop over process table looking for process to run.
 		acquire(&ptable.lock);
 		for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-			//cprintf("iterating, pid: %d\n", p->pid);
 			if(p->state != RUNNABLE)
 				continue;
 
@@ -518,6 +538,11 @@ void sched(void) {
 // Give up the CPU for one scheduling round.
 void yield(void) {
   acquire(&ptable.lock);  //DOC: yieldlock
+  
+
+  int uptime = systemUptime();
+  proc->rutime += (uptime - proc->stateTickChanged);
+  proc->stateTickChanged = uptime;
   proc->state = RUNNABLE;
   sched();
   release(&ptable.lock);
@@ -565,6 +590,10 @@ void sleep(void *chan, struct spinlock *lk) {
   // Go to sleep.
   proc->chan = chan;
   proc->state = SLEEPING;
+  int uptime = systemUptime();
+  proc->rutime += (uptime - proc->stateTickChanged);
+  proc->stateTickChanged = uptime;
+
   sched();
 
   // Tidy up.
@@ -584,8 +613,12 @@ static void wakeup1(void *chan) {
   struct proc *p;
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    if(p->state == SLEEPING && p->chan == chan)
+    if(p->state == SLEEPING && p->chan == chan) {
+      int uptime = systemUptime();
+      p->stime += (uptime - p->stateTickChanged);
+      p->stateTickChanged = uptime;
       p->state = RUNNABLE;
+    }
 }
 
 // Wake up all processes sleeping on chan.
@@ -606,8 +639,12 @@ int kill(int pid) {
     if(p->pid == pid){
       p->killed = 1;
       // Wake process from sleep if necessary.
-      if(p->state == SLEEPING)
+      if(p->state == SLEEPING) {
+        int uptime = systemUptime();
+        p->stime += (uptime - p->stateTickChanged);
+        p->stateTickChanged = uptime;
         p->state = RUNNABLE;
+      }
       release(&ptable.lock);
       return 0;
     }
