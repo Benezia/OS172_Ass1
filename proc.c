@@ -69,6 +69,8 @@ found:
 		break;
   }
 
+  //p->performance->ctime = systemUptime();
+
   release(&ptable.lock);
 
   // Allocate kernel stack.
