@@ -5,4 +5,5 @@
 
 int main() {
     policy(5);
+    exit(0);
 }

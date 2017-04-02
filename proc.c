@@ -20,6 +20,8 @@ extern void trapret(void);
 
 static void wakeup1(void *chan);
 static unsigned long int next = 1;
+
+
 enum policy { UNIFORM, PRIORITY, DYNAMIC };
 enum policy pol = UNIFORM;
 
@@ -352,8 +354,9 @@ int wait(int * status) {
 }
 
 void distributeTickets(int ticketCount) {
-  	acquire(&ptable.lock);
-	for(struct proc *p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+  acquire(&ptable.lock);
+  struct proc *p;
+	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
 		if(p->state != UNUSED)
 			p->ntickets = ticketCount;
 	}
@@ -385,7 +388,8 @@ void policy(int policy) {
 int getTicketSum(void) {
 	int sum = 0;
   	acquire(&ptable.lock);
-	for(struct proc *p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+  struct proc *p;
+	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
 		if(p->state != UNUSED)
 			sum += p->ntickets;
 	}
@@ -393,7 +397,14 @@ int getTicketSum(void) {
 	return sum;
 }
 
+static int first = 0;
 int getRandomTicket(void) {
+
+  if (first == 0 && ticks != 0){   
+      first = 1;
+      next = ticks;
+    }
+
 	int ticketSum = getTicketSum();
 	if (ticketSum == 0)
 		return 0;
@@ -403,7 +414,8 @@ int getRandomTicket(void) {
 
 struct proc* getSelectedProc(int ticketNum) {
   	acquire(&ptable.lock);
-	for(struct proc *p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    struct proc *p;
+	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
 		if(p->state == UNUSED)
 			continue;
 		ticketNum -= p->ntickets;

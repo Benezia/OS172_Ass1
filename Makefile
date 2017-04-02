@@ -161,8 +161,12 @@ mkfs: mkfs.c fs.h
 
 _path:
 	echo "/:/bin/:" > _path
+	
+_IOtest:
+	echo "aaa" > _IOtest
 
 UPROGS=\
+	_IOtest\
 	_path\
 	_cat\
 	_echo\
