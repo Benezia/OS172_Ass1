@@ -15,86 +15,70 @@ struct perf {
 
 void printStat(struct perf * myPerf, int status){
 
-	printf(1, "#%d-\n",status);
-	printf(1, "start time: %d\n",myPerf->ctime);
-	printf(1, "end time: %d\n",myPerf->ttime);
-	printf(1, "sleep time: %d\n",myPerf->stime);
-    printf(1, "runnable time: %d\n",myPerf->retime);
-    printf(1, "running time: %d\n",myPerf->rutime);
-    printf(1, "turnaround time: %d\n",myPerf->ttime-myPerf->ctime);
+	printf(1, "%d\tstart\t\t%d\n",status, myPerf->ctime);
+	printf(1, "%d\tend\t\t%d\n",status, myPerf->ttime);
+	printf(1, "%d\tsleep\t\t%d\n",status, myPerf->stime);
+    printf(1, "%d\trunnable\t%d\n",status, myPerf->retime);
+    printf(1, "%d\trunning\t\t%d\n",status, myPerf->rutime);
+    printf(1, "%d\tturnaround\t%d\n",status, myPerf->ttime-myPerf->ctime);
+    printf(1, "%d\tSpent %d\% as runnable\n",status, (myPerf->retime*100/(myPerf->ttime-myPerf->ctime)));
+    printf(1, "%d\tSpent %d\% in sleep\n",status, (myPerf->stime*100/(myPerf->ttime-myPerf->ctime)));
+
     printf(1, "\n");
 }
 
-void work2(int fd){
 
-	
+void fib(int n) {
+	if (n <= 1)
+		return;
+	fib(n-1);
+	fib(n-2);
+}
+
+void workIO(){
 	int i;
+	int fd;
 	char buff[1];
 	buff[0] = 'a';
-
-
-	 for (i=0;i< 1000 ;i++){
-	 		
-	 	write(fd, buff, 1);
-	}
-
-	
-
-	
-
-
-}
-
-void work(){
-	int i;
-
-	char src[1000];
-	for (i=0;i<100000000;i++){
-		src[i % 1000]= src[1];
-	}
-
-  //   char * dest = (char *)malloc(strlen(src));
-	 // for (i=0;i<strlen(src);i++){
-	 // 	dest[i] = src[i];
-	 // }
-}
-
-
-int main() {
-    int status;
-    struct perf  myPerf;
-    int deadpool = 30;
-    int fd;
-
-
-
 	fd = open("/bin/IOtest", 1);
 	if (fd == -1){
 		printf(1,"fail to open file\n");
 		exit(1);
 	}
 
-  //  policy(1);
+	for (i=0;i< 120 ;i++)
+	 	write(fd, buff, 1);
+	close(fd);
+}
+
+void workCPU(){
+	fib(40);
+}
+
+
+int main() {
+    int status;
+    struct perf  myPerf;
+    int deadpool = 6;
+
+    //policy(1);
 
     int i;
     for (i=0; i < deadpool; i++){
 	    if (fork()==0){
 
 	    	if (i%2==0){
-	    		work();
+	    		workIO();
 	    	}
 	    	else{
-	    		work2(fd);
+	    		workCPU();
 	    	}
 
 	    	//if (i==27 || i==28 || i==29 ){priority(200);}	    	
-	    	printf(2,"\n");	
-
 	    	exit(i);
 	    }
 	}
 
-	close(fd);
 
 	for (i=0; i<deadpool; i++){
 		wait_stat(&status, &myPerf);
