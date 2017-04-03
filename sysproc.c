@@ -61,10 +61,8 @@ int sys_policy(void) {
   int p;
     if (argint(0, &p) < 0)
       return -1;
-    else {
-      policy(p);
-      return 0;
-    }
+    policy(p);
+    return 0;
 }
 
 

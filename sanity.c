@@ -13,8 +13,8 @@ struct perf {
 };
 
 
-void printStat(struct perf * myPerf, int status){
-
+void printStat(struct perf * myPerf, int status, int iteration){
+/*
 	printf(1, "%d\tstart\t\t%d\n",status, myPerf->ctime);
 	printf(1, "%d\tend\t\t%d\n",status, myPerf->ttime);
 	printf(1, "%d\tsleep\t\t%d\n",status, myPerf->stime);
@@ -23,8 +23,10 @@ void printStat(struct perf * myPerf, int status){
     printf(1, "%d\tturnaround\t%d\n",status, myPerf->ttime-myPerf->ctime);
     printf(1, "%d\tSpent %d\% as runnable\n",status, (myPerf->retime*100/(myPerf->ttime-myPerf->ctime)));
     printf(1, "%d\tSpent %d\% in sleep\n",status, (myPerf->stime*100/(myPerf->ttime-myPerf->ctime)));
-
     printf(1, "\n");
+*/
+	printf(1, "%d\t%d\t%d\t%d\t%d\t%d\n",iteration, status, myPerf->stime, myPerf->retime, myPerf->rutime, myPerf->ttime-myPerf->ctime);
+
 }
 
 
@@ -37,52 +39,46 @@ void fib(int n) {
 
 void workIO(){
 	int i;
-	int fd;
-	char buff[1];
-	buff[0] = 'a';
-	fd = open("/bin/IOtest", 1);
-	if (fd == -1){
-		printf(1,"fail to open file\n");
-		exit(1);
-	}
-
-	for (i=0;i< 120 ;i++)
-	 	write(fd, buff, 1);
-	close(fd);
+	for (i=0; i<1750 ;i++)
+	 	sleep(1);
 }
 
 void workCPU(){
-	fib(40);
+	fib(41);
 }
 
 
 int main() {
     int status;
     struct perf  myPerf;
-    int deadpool = 6;
 
     //policy(1);
+    int deadpool = 1;	//Total procedures to run
+    int i; 				//# of procedure
+    int j;				//# of test
 
-    int i;
-    for (i=0; i < deadpool; i++){
-	    if (fork()==0){
+    for (j=0; j < 10; j++) {
+	    for (i=0; i < deadpool; i++){
+		    if (fork()==0){
+		    	//if (i%9 == 0)
+		    	//	priority(200);    	
 
-	    	if (i%2==0){
-	    		workIO();
-	    	}
-	    	else{
-	    		workCPU();
-	    	}
+		    	if (i%2 == 0){
+		    		//priority(100);
+		    		workCPU();
+		    	}
+		    	else{
+		    		workCPU();
+		    	}
 
-	    	//if (i==27 || i==28 || i==29 ){priority(200);}	    	
-	    	exit(i);
-	    }
-	}
+		    	exit(i);
+		    }
+		}
 
-
-	for (i=0; i<deadpool; i++){
-		wait_stat(&status, &myPerf);
-		printStat(&myPerf, status);
+		for (i=0; i<deadpool; i++){
+			wait_stat(&status, &myPerf);
+			printStat(&myPerf, status, j+1);
+		}
 	}
 
 	return 0;

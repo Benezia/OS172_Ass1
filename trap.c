@@ -13,6 +13,7 @@ struct gatedesc idt[256];
 extern uint vectors[];  // in vectors.S: array of 256 entry pointers
 struct spinlock tickslock;
 uint ticks;
+extern void incCounters(void);
 
 void tvinit(void) {
   int i;
@@ -46,6 +47,8 @@ void trap(struct trapframe *tf) {
       acquire(&tickslock);
       ticks++;
       wakeup(&ticks);
+      incCounters();
+
       release(&tickslock);
     }
     lapiceoi();

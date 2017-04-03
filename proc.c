@@ -55,15 +55,15 @@ found:
   p->state = EMBRYO;
   p->pid = nextpid++;
   switch(pol) {
-  	case UNIFORM:
-		p->ntickets = 1;
-		break;
-	case PRIORITY:
-		p->ntickets = 10;
-		break;
-	case DYNAMIC:
-		p->ntickets = 20;
-		break;
+    case UNIFORM:
+    p->ntickets = 1;
+    break;
+  case PRIORITY:
+    p->ntickets = 10;
+    break;
+  case DYNAMIC:
+    p->ntickets = 20;
+    break;
   }
   release(&ptable.lock);
 
@@ -124,7 +124,6 @@ void userinit(void) {
   acquire(&ptable.lock);
 
   p->state = RUNNABLE;
-  p->stateTickChanged = systemUptime();
   release(&ptable.lock);
 }
 
@@ -184,7 +183,6 @@ int fork(void) {
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
-  np->stateTickChanged = systemUptime();
 
   release(&ptable.lock);
 
@@ -230,11 +228,7 @@ void exit(int status) {
     }
   }
 
-  int uptime = systemUptime();
-  p->rutime += (uptime - p->stateTickChanged);
-  p->stateTickChanged = uptime;
-  proc->ttime = uptime;
-
+  proc->ttime = systemUptime();
   // Jump into the scheduler, never to return.
 
   proc->state = ZOMBIE;
@@ -356,45 +350,45 @@ int wait(int * status) {
 void distributeTickets(int ticketCount) {
   acquire(&ptable.lock);
   struct proc *p;
-	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
-		if(p->state != UNUSED)
-			p->ntickets = ticketCount;
-	}
-  	release(&ptable.lock);	
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if(p->state != UNUSED)
+      p->ntickets = ticketCount;
+  }
+    release(&ptable.lock);  
 }
 
 
 void priority(int priority) { 
   if (pol == PRIORITY)
-  	proc->ntickets = priority;
+    proc->ntickets = priority;
 }
 
 
 void policy(int policy) {
   pol = policy;
   switch(pol) {
-  	case UNIFORM:
-  		distributeTickets(1);
-  		break;
-  	case PRIORITY:
-  	  	distributeTickets(10);
-  	  	break;
-  	case DYNAMIC:
-  		distributeTickets(20);
-  		break;
+    case UNIFORM:
+      distributeTickets(1);
+      break;
+    case PRIORITY:
+        distributeTickets(10);
+        break;
+    case DYNAMIC:
+      distributeTickets(20);
+      break;
   }
 }
 
 int getTicketSum(void) {
-	int sum = 0;
-  	acquire(&ptable.lock);
+  int sum = 0;
+    acquire(&ptable.lock);
   struct proc *p;
-	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
-		if(p->state != UNUSED)
-			sum += p->ntickets;
-	}
-  	release(&ptable.lock);
-	return sum;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if(p->state != UNUSED)
+      sum += p->ntickets;
+  }
+    release(&ptable.lock);
+  return sum;
 }
 
 static int first = 0;
@@ -405,41 +399,41 @@ int getRandomTicket(void) {
       next = ticks;
     }
 
-	int ticketSum = getTicketSum();
-	if (ticketSum == 0)
-		return 0;
-    next = next * 1103515245 + 12341;
-    return (unsigned int)(next/65536) % ticketSum;
+  int ticketSum = getTicketSum();
+  if (ticketSum == 0)
+    return 0;
+  next = next * 1103515245 + 12341;
+  return (unsigned int)(next/65536) % ticketSum;
 }
 
 struct proc* getSelectedProc(int ticketNum) {
-  	acquire(&ptable.lock);
+    acquire(&ptable.lock);
     struct proc *p;
-	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
-		if(p->state == UNUSED)
-			continue;
-		ticketNum -= p->ntickets;
-		if (ticketNum < 0) {
-			release(&ptable.lock);
-			return p;
-		}
-	}
-  	release(&ptable.lock);
-	return 0;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if(p->state == UNUSED)
+      continue;
+    ticketNum -= p->ntickets;
+    if (ticketNum < 0) {
+      release(&ptable.lock);
+      return p;
+    }
+  }
+    release(&ptable.lock);
+  return 0;
 }
 
 
 void redistributeTickets() {
-	int state = proc->state;
-	int ticketCount = proc->ntickets;
-	if (state == RUNNABLE && ticketCount > 1)
-		proc->ntickets--;
-	if (state == SLEEPING) {
-		if (ticketCount > 90)
-			proc->ntickets = 100;
-		else
-			proc->ntickets += 10;
-	}
+  int state = proc->state;
+  int ticketCount = proc->ntickets;
+  if (state == RUNNABLE && ticketCount > 1)
+    proc->ntickets--;
+  if (state == SLEEPING) {
+    if (ticketCount > 90)
+      proc->ntickets = 100;
+    else
+      proc->ntickets += 10;
+  }
 }
 
 
@@ -453,73 +447,70 @@ void redistributeTickets() {
 //      via swtch back to the scheduler.
 //IMPLEMENTED SKEDULAR
 void scheduler(void) {
-	struct proc *p;
-	int ticketNum;
+  struct proc *p;
+  int ticketNum;
 
-	for(;;) {
-		sti();	// Enable interrupts on this processor.
-		ticketNum = getRandomTicket();
-		p = getSelectedProc(ticketNum);
-		acquire(&ptable.lock);
-		if(p != 0 && p->state == RUNNABLE) {
+  for(;;) {
+    sti();  // Enable interrupts on this processor.
+    ticketNum = getRandomTicket();
+    p = getSelectedProc(ticketNum);
+    acquire(&ptable.lock);
+    if(p != 0 && p->state == RUNNABLE) {
 
-			// Switch to chosen process.  It is the process's job
-			// to release ptable.lock and then reacquire it
-			// before jumping back to us.
-			proc = p;
-			switchuvm(p);
-      int uptime = systemUptime();
-      p->retime += (uptime - p->stateTickChanged);
-      p->stateTickChanged = uptime;
-			p->state = RUNNING;
-			swtch(&cpu->scheduler, p->context);
-			switchkvm();
+      // Switch to chosen process.  It is the process's job
+      // to release ptable.lock and then reacquire it
+      // before jumping back to us.
+      proc = p;
+      switchuvm(p);
+      p->state = RUNNING;
+      swtch(&cpu->scheduler, p->context);
+      switchkvm();
 
-			if (pol == DYNAMIC)
-				redistributeTickets();
-			// Process is done running for now.
-			// It should have changed its p->state before coming back.
+      if (pol == DYNAMIC)
+        redistributeTickets();
+      // Process is done running for now.
+      // It should have changed its p->state before coming back.
 
 
-			proc = 0;
-		}
-		release(&ptable.lock);
+      proc = 0;
+    }
+    release(&ptable.lock);
 
-	}
+  }
 }
 
 
 
 //ORIGINAL SKEDULAR
 void orig_scheduler(void) {
-	struct proc *p;
+  struct proc *p;
 
-	for(;;){
-		// Enable interrupts on this processor.
-		sti();
+  for(;;){
+    // Enable interrupts on this processor.
+    sti();
 
-		// Loop over process table looking for process to run.
-		acquire(&ptable.lock);
-		for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-			if(p->state != RUNNABLE)
-				continue;
+    // Loop over process table looking for process to run.
+    acquire(&ptable.lock);
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->state != RUNNABLE)
+        continue;
 
-			// Switch to chosen process.  It is the process's job
-			// to release ptable.lock and then reacquire it
-			// before jumping back to us.
-			proc = p;
-			switchuvm(p);
-			p->state = RUNNING;
-			swtch(&cpu->scheduler, p->context);
-			switchkvm();
+      // Switch to chosen process.  It is the process's job
+      // to release ptable.lock and then reacquire it
+      // before jumping back to us.
+      proc = p;
+      switchuvm(p);
+      p->state = RUNNING;
+      swtch(&cpu->scheduler, p->context);
+      switchkvm();
 
-			// Process is done running for now.
-			// It should have changed its p->state before coming back.
-			proc = 0;
-		}
-		release(&ptable.lock);
+      // Process is done running for now.
+      // It should have changed its p->state before coming back.
+      proc = 0;
+    }
+    release(&ptable.lock);
 
-	}
+  }
 }
 
 
@@ -550,11 +541,6 @@ void sched(void) {
 // Give up the CPU for one scheduling round.
 void yield(void) {
   acquire(&ptable.lock);  //DOC: yieldlock
-  
-
-  int uptime = systemUptime();
-  proc->rutime += (uptime - proc->stateTickChanged);
-  proc->stateTickChanged = uptime;
   proc->state = RUNNABLE;
   sched();
   release(&ptable.lock);
@@ -602,9 +588,6 @@ void sleep(void *chan, struct spinlock *lk) {
   // Go to sleep.
   proc->chan = chan;
   proc->state = SLEEPING;
-  int uptime = systemUptime();
-  proc->rutime += (uptime - proc->stateTickChanged);
-  proc->stateTickChanged = uptime;
 
   sched();
 
@@ -626,9 +609,6 @@ static void wakeup1(void *chan) {
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == SLEEPING && p->chan == chan) {
-      int uptime = systemUptime();
-      p->stime += (uptime - p->stateTickChanged);
-      p->stateTickChanged = uptime;
       p->state = RUNNABLE;
     }
 }
@@ -652,9 +632,6 @@ int kill(int pid) {
       p->killed = 1;
       // Wake process from sleep if necessary.
       if(p->state == SLEEPING) {
-        int uptime = systemUptime();
-        p->stime += (uptime - p->stateTickChanged);
-        p->stateTickChanged = uptime;
         p->state = RUNNABLE;
       }
       release(&ptable.lock);
@@ -663,6 +640,21 @@ int kill(int pid) {
   }
   release(&ptable.lock);
   return -1;
+}
+
+
+void incCounters(void) {
+  struct proc *p;
+  acquire(&ptable.lock);
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if (p->state == SLEEPING)
+        p->stime++;
+      if (p->state == RUNNABLE)
+        p->retime++;
+      if (p->state == RUNNING)
+        p->rutime++;
+  }
+  release(&ptable.lock);
 }
 
 //PAGEBREAK: 36
