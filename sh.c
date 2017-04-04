@@ -65,7 +65,6 @@ runcmd(struct cmd *cmd)
   struct redircmd *rcmd;
   int fd;
   char c[1];
-  int isEOF;
   char s[512];
   int stringLoc = 0;
   char * myCmd;
@@ -88,8 +87,7 @@ runcmd(struct cmd *cmd)
     fd = open("/path",O_RDONLY);
 
     if (myCmd[0] != '/'){
-	    while ((isEOF = read(fd,c,1)) != -1){
-	    	
+	    while (read(fd,c,1) != 0){
 	    	if (c[0]!=':'){
 	    		s[stringLoc] = c[0];
 	    		stringLoc++;
@@ -105,10 +103,9 @@ runcmd(struct cmd *cmd)
 
 	    		stringLoc = 0;
 	    		cmdLoc = 0;
-	    		//printf(2, "fhat and command: %s \n", s);
 	    		exec(s, ecmd->argv);
 	    	}
-	    }
+      }
 	    printf(2, "exec %s failed\n", ecmd->argv[0]);
 	}
 	else{

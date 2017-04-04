@@ -7,9 +7,7 @@
 #include "x86.h"
 #include "elf.h"
 
-void 
-pseudo_main(int (*entry)(int, char**), int argc, char **argv) 
-{ 
+void pseudo_main(int (*entry)(int, char**), int argc, char **argv) { 
 
   (*entry)(argc,argv);
  
@@ -19,9 +17,7 @@ pseudo_main(int (*entry)(int, char**), int argc, char **argv)
           "int $64");
 }
 
-int
-exec(char *path, char **argv)
-{
+int exec(char *path, char **argv) {
   char *s, *last;
   int i, off;
   uint argc, sz, sp, ustack[3+MAXARG+1];
@@ -32,7 +28,6 @@ exec(char *path, char **argv)
   pde_t *pgdir, *oldpgdir;
 
   begin_op();
-
   if((ip = namei(path)) == 0){
     end_op();
     return -1;
